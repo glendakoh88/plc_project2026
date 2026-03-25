@@ -64,6 +64,10 @@ int main(void) {
         printf("BMP file is valid\n");
     } else {
         printf("Corrupted BMP file\n");
+        fclose(bmp_file);
+        free(header);
+        free(dib_header);
+        exit(1);
     }
 
     fclose(bmp_file);
