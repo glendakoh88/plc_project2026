@@ -3,8 +3,7 @@
 #include "bmp.h"
 #include "fsm.h"
 
-
-
+/*validation functions*/
 int check_B(BMPHeader *h, DIBHeader *d, long size) { return h->B == 'B'; }
 int check_M(BMPHeader *h, DIBHeader *d, long size) { return h->M == 'M'; }
 int check_file_size(BMPHeader *h, DIBHeader *d, long size) { return h->size == size; }
@@ -13,7 +12,7 @@ int check_planes(BMPHeader *h, DIBHeader *d, long size) { return d->planes == 1;
 int check_bit_depth(BMPHeader *h, DIBHeader *d, long size) {return d->bits == 1 || d->bits == 4 || d->bits == 8 ||d->bits == 16 || d->bits == 24 || d->bits == 32;}
 int check_compression(BMPHeader *h, DIBHeader *d, long size) { return d->compression <= 3; }
 
-
+/*fsm transition table implementation*/
 int process_fsm(BMPHeader *header, DIBHeader *dib_header, long file_size) {
     FSM machine;
 
@@ -41,6 +40,7 @@ int process_fsm(BMPHeader *header, DIBHeader *dib_header, long file_size) {
     return machine.state == VALID;
 }
 
+
 int main(void) {
     
     BMPHeader *header = (BMPHeader*)malloc(sizeof(BMPHeader));
@@ -59,7 +59,7 @@ int main(void) {
     fread(header, sizeof(BMPHeader), 1, bmp_file);
     fread(dib_header, sizeof(DIBHeader), 1, bmp_file);
 
-    /* FSM validation*/
+    /* FSM validation using transition table*/
     if (process_fsm(header, dib_header, file_size)) {
         printf("BMP file is valid\n");
     } else {
