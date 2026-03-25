@@ -42,10 +42,10 @@ int process_fsm(BMPHeader *header, DIBHeader *dib_header, long file_size) {
 }
 
 int main(void) {
-    long file_size;
-    int valid;
+    
     BMPHeader *header = (BMPHeader*)malloc(sizeof(BMPHeader));
     DIBHeader *dib_header = (DIBHeader*)malloc(sizeof(DIBHeader));
+    long file_size;
 
     /* Open BMP file */
     FILE *bmp_file = fopen("./test.bmp", "rb");
@@ -55,28 +55,16 @@ int main(void) {
     file_size = ftell(bmp_file);
     rewind(bmp_file);
 
-    if (!header || !dib_header) { perror("malloc failed"); return 1; }
+    /* read BMP and DIB headers*/
+    fread(header, sizeof(BMPHeader), 1, bmp_file);
+    fread(dib_header, sizeof(DIBHeader), 1, bmp_file);
 
-    if (fread(header, sizeof(BMPHeader), 1, bmp_file) != 1 ||
-        fread(dib_header, sizeof(DIBHeader), 1, bmp_file) != 1) {
-        printf("Failed to read headers\n");
-        fclose(bmp_file);
-        free(header);
-        free(dib_header);
-        return 1;
-    }
-
-    
-    /* FSM validation */
-    valid = process_fsm(header, dib_header, file_size);
-
-    /* Print result */
-    if (valid) {
+    /* FSM validation*/
+    if (process_fsm(header, dib_header, file_size)) {
         printf("BMP file is valid\n");
     } else {
         printf("Corrupted BMP file\n");
     }
-
 
     fclose(bmp_file);
     free(header);
