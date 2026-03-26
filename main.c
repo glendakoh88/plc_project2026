@@ -12,43 +12,34 @@ int check_planes(BMPHeader *h, DIBHeader *d, long size) { return d->planes == 1;
 int check_bit_depth(BMPHeader *h, DIBHeader *d, long size) {return d->bits == 1 || d->bits == 4 || d->bits == 8 ||d->bits == 16 || d->bits == 24 || d->bits == 32;}
 int check_compression(BMPHeader *h, DIBHeader *d, long size) { return d->compression <= 3; }
 
-/*fsm transition table implementation*/
-int process_fsm(BMPHeader *header, DIBHeader *dib_header, long file_size) {
-    FSM machine;
 
-    Transition fsm[] = {
-        {START, NULL, CHECK_B, INVALID},
-        {CHECK_B, check_B, CHECK_M, INVALID},
-        {CHECK_M, check_M, CHECK_FILE_SIZE, INVALID},
-        {CHECK_FILE_SIZE, check_file_size, CHECK_DIB_SIZE, INVALID},
-        {CHECK_DIB_SIZE, check_dib_size, CHECK_PLANES, INVALID},
-        {CHECK_PLANES, check_planes, CHECK_BIT_DEPTH, INVALID},
-        {CHECK_BIT_DEPTH, check_bit_depth, CHECK_COMPRESSION, INVALID},
-        {CHECK_COMPRESSION, check_compression, VALID, INVALID}
+
+Transition table[] = {
+        {check_B, B_OK, INVALID}, /*START*/
+        {check_M, M_OK, INVALID},/*B_OK*/
+        {check_file_size, FILE_SIZE_OK, INVALID},/*M_OK*/
+        {check_dib_size, DIB_SIZE_OK, INVALID},/*FILE_SIZE_OK*/
+        {check_planes, PLANES_OK, INVALID},/*DIB_SIZE_OK*/
+        {check_bit_depth, BIT_DEPTH_OK, INVALID},/*PLANES_OK*/
+        {check_compression,COMPRESSION_OK, INVALID},/*BIT_DEPTH_OK*/
+        {NULL, COMPRESSION_OK, INVALID},/*COMPRESSION_OK*/
     };
 
-    machine.state = START;
-    while (machine.state != VALID && machine.state != INVALID) {
-        Transition t = fsm[machine.state];
-        if (!t.check || t.check(header, dib_header, file_size)) {
-            machine.state = t.next_if_ok;
-        } else {
-            machine.state = t.next_if_fail;
-        }
-    }
+void update_state(FSM * fsm, BMPHeader * bmp_header, DIBHeader * dib_header,long file_size){
+    if(table[fsm->state].check(bmp_header,dib_header,file_size)){
+        fsm->state = table[fsm->state].next_if_ok;
+    }else {fsm->state = table[fsm->state].next_if_fail;}
 
-    return machine.state == VALID;
 }
 
-
 int main(void) {
-    
+    /* Open BMP file */
+    FILE *bmp_file = fopen("./test.bmp", "rb");
     BMPHeader *header = (BMPHeader*)malloc(sizeof(BMPHeader));
     DIBHeader *dib_header = (DIBHeader*)malloc(sizeof(DIBHeader));
     long file_size;
+    FSM fsm;
 
-    /* Open BMP file */
-    FILE *bmp_file = fopen("./test.bmp", "rb");
     if (!bmp_file) { perror("Failed to open file"); return 1; }
     
     fseek(bmp_file, 0, SEEK_END);
@@ -60,16 +51,20 @@ int main(void) {
     fread(dib_header, sizeof(DIBHeader), 1, bmp_file);
 
     /* FSM validation using transition table*/
-    if (process_fsm(header, dib_header, file_size)) {
-        printf("BMP file is valid\n");
-    } else {
-        printf("Corrupted BMP file\n");
+    fsm.state = START;
+    while (fsm.state != INVALID && fsm.state != COMPRESSION_OK){
+        update_state(&fsm, header, dib_header,file_size);
+    }
+
+    if (fsm.state != COMPRESSION_OK){
+        printf("Corrupted bmp file \n");
         fclose(bmp_file);
         free(header);
         free(dib_header);
         exit(1);
     }
 
+    printf("Valid bmp\n");
     fclose(bmp_file);
     free(header);
     free(dib_header);
