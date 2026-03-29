@@ -1,0 +1,4 @@
+grayscale
+brightness 40
+flip horizontal
+invert
