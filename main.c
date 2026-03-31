@@ -2,71 +2,137 @@
 #include <stdlib.h>
 #include "bmp.h"
 #include "fsm.h"
+#include "parser.h"
+#include "filters.h"
 
-/*validation functions*/
-int check_B(BMPHeader *h, DIBHeader *d, long size) { return h->B == 'B'; }
-int check_M(BMPHeader *h, DIBHeader *d, long size) { return h->M == 'M'; }
-int check_file_size(BMPHeader *h, DIBHeader *d, long size) { return h->size == size; }
-int check_dib_size(BMPHeader *h, DIBHeader *d, long size) {return d->header_size == 12 || d->header_size == 40 || d->header_size == 52 ||d->header_size == 56 || d->header_size == 108 || d->header_size == 124;}
-int check_planes(BMPHeader *h, DIBHeader *d, long size) { return d->planes == 1; }
-int check_bit_depth(BMPHeader *h, DIBHeader *d, long size) {return d->bits == 1 || d->bits == 4 || d->bits == 8 ||d->bits == 16 || d->bits == 24 || d->bits == 32;}
-int check_compression(BMPHeader *h, DIBHeader *d, long size) { return d->compression <= 3; }
-
-
-
-Transition table[] = {
-        {check_B, B_OK, INVALID}, /*START*/
-        {check_M, M_OK, INVALID},/*B_OK*/
-        {check_file_size, FILE_SIZE_OK, INVALID},/*M_OK*/
-        {check_dib_size, DIB_SIZE_OK, INVALID},/*FILE_SIZE_OK*/
-        {check_planes, PLANES_OK, INVALID},/*DIB_SIZE_OK*/
-        {check_bit_depth, BIT_DEPTH_OK, INVALID},/*PLANES_OK*/
-        {check_compression,COMPRESSION_OK, INVALID},/*BIT_DEPTH_OK*/
-        {NULL, COMPRESSION_OK, INVALID},/*COMPRESSION_OK*/
-    };
-
-void update_state(FSM * fsm, BMPHeader * bmp_header, DIBHeader * dib_header,long file_size){
-    if(table[fsm->state].check(bmp_header,dib_header,file_size)){
-        fsm->state = table[fsm->state].next_if_ok;
-    }else {fsm->state = table[fsm->state].next_if_fail;}
-
-}
-
-int main(void) {
-    /* Open BMP file */
-    FILE *bmp_file = fopen("./test.bmp", "rb");
-    BMPHeader *header = (BMPHeader*)malloc(sizeof(BMPHeader));
-    DIBHeader *dib_header = (DIBHeader*)malloc(sizeof(DIBHeader));
+int main(int argc, char *argv[])
+{
+    char *input_bmp_path;
+    char *script_path;
+    char *output_bmp_path;
+    FILE *bmp_file;
+    FILE *script_file;
+    BMPHeader header;
+    DIBHeader dib_header;
     long file_size;
-    FSM fsm;
+    FilterCommand commands[MAX_COMMANDS];
+    int command_count;
+    unsigned char *header_block;
+    unsigned char *trailer_block;
+    long trailer_size;
+    Pixel *pixels;
+    int width;
+    int height;
+    int abs_height;
 
-    if (!bmp_file) { perror("Failed to open file"); return 1; }
-    
-    fseek(bmp_file, 0, SEEK_END);
-    file_size = ftell(bmp_file);
-    rewind(bmp_file);
-
-    /* read BMP and DIB headers*/
-    fread(header, sizeof(BMPHeader), 1, bmp_file);
-    fread(dib_header, sizeof(DIBHeader), 1, bmp_file);
-
-    /* FSM validation using transition table*/
-    fsm.state = START;
-    while (fsm.state != INVALID && fsm.state != COMPRESSION_OK){
-        update_state(&fsm, header, dib_header,file_size);
+    if (argc != 4) {
+        fprintf(stderr, "Usage: %s input.bmp filters.txt output.bmp\n", argv[0]);
+        return 1;
     }
 
-    if (fsm.state != COMPRESSION_OK){
-        printf("Corrupted bmp file \n");
+    input_bmp_path = argv[1];
+    script_path = argv[2];
+    output_bmp_path = argv[3];
+
+    bmp_file = fopen(input_bmp_path, "rb");
+    if (bmp_file == NULL) {
+        perror("Failed to open input BMP file");
+        return 1;
+    }
+
+    file_size = get_file_size(bmp_file);
+    if (file_size < 0) {
+        fprintf(stderr, "Failed to determine BMP file size\n");
         fclose(bmp_file);
-        free(header);
-        free(dib_header);
-        exit(1);
+        return 1;
     }
 
-    printf("Valid bmp\n");
+    if (!read_bmp_headers(bmp_file, &header, &dib_header)) {
+        fprintf(stderr, "Failed to read BMP headers\n");
+        fclose(bmp_file);
+        return 1;
+    }
+
+    if (!validate_bmp(&header, &dib_header, file_size)) {
+        fprintf(stderr, "Invalid or unsupported BMP format\n");
+        fclose(bmp_file);
+        return 1;
+    }
+
+    printf("Valid BMP file\n");
+
+    script_file = fopen(script_path, "r");
+    if (script_file == NULL) {
+        perror("Failed to open filter script");
+        fclose(bmp_file);
+        return 1;
+    }
+
+    command_count = 0;
+    if (!parse_script(script_file, commands, &command_count)) {
+        fclose(script_file);
+        fclose(bmp_file);
+        return 1;
+    }
+
+    printf("Parsed %d command(s) successfully\n", command_count);
+
+    header_block = read_header_block(bmp_file, &header);
+    if (header_block == NULL) {
+        fprintf(stderr, "Failed to read BMP header block\n");
+        fclose(script_file);
+        fclose(bmp_file);
+        return 1;
+    }
+
+    trailer_size = 0;
+    trailer_block = read_trailer_block(bmp_file, &header, &dib_header, file_size, &trailer_size);
+
+    pixels = read_pixels(bmp_file, &header, &dib_header);
+    if (pixels == NULL) {
+        fprintf(stderr, "Failed to read pixel data\n");
+        free(header_block);
+        if (trailer_block != NULL) {
+            free(trailer_block);
+        }
+        fclose(script_file);
+        fclose(bmp_file);
+        return 1;
+    }
+
+    width = (int)dib_header.width;
+    height = (int)dib_header.height;
+    abs_height = height > 0 ? height : -height;
+
+    apply_filters(pixels, width, abs_height, commands, command_count);
+
+    if (!write_bmp(output_bmp_path,
+                   header_block,
+                   trailer_block,
+                   trailer_size,
+                   &header,
+                   &dib_header,
+                   pixels)) {
+        fprintf(stderr, "Failed to write output BMP\n");
+        free(pixels);
+        free(header_block);
+        if (trailer_block != NULL) {
+            free(trailer_block);
+        }
+        fclose(script_file);
+        fclose(bmp_file);
+        return 1;
+    }
+
+    printf("Output written successfully to %s\n", output_bmp_path);
+
+    free(pixels);
+    free(header_block);
+    if (trailer_block != NULL) {
+        free(trailer_block);
+    }
+    fclose(script_file);
     fclose(bmp_file);
-    free(header);
-    free(dib_header);
+
     return 0;
 }
