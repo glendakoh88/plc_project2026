@@ -11,7 +11,10 @@ typedef enum {
     FILTER_INVERT,
     FILTER_BRIGHTNESS,
     FILTER_FLIP_H,
-    FILTER_FLIP_V
+    FILTER_FLIP_V,
+    FILTER_SEPIA,
+    FILTER_THRESHOLD,
+    FILTER_CONTRAST
 } FilterType;
 
 typedef struct {

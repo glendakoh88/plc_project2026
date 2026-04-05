@@ -57,6 +57,71 @@ static void apply_brightness(Pixel *pixels, int width, int height, int amount)
     }
 }
 
+static void apply_sepia(Pixel *pixels, int width, int height)
+{
+    int i;
+    int count;
+    int new_r;
+    int new_g;
+    int new_b;
+    unsigned char old_r;
+    unsigned char old_g;
+    unsigned char old_b;
+
+    count = width * height;
+
+    for (i = 0; i < count; i++) {
+        old_r = pixels[i].r;
+        old_g = pixels[i].g;
+        old_b = pixels[i].b;
+
+        new_r = (393 * (int)old_r + 769 * (int)old_g + 189 * (int)old_b) / 1000;
+        new_g = (349 * (int)old_r + 686 * (int)old_g + 168 * (int)old_b) / 1000;
+        new_b = (272 * (int)old_r + 534 * (int)old_g + 131 * (int)old_b) / 1000;
+
+        pixels[i].r = clamp_to_byte(new_r);
+        pixels[i].g = clamp_to_byte(new_g);
+        pixels[i].b = clamp_to_byte(new_b);
+    }
+}
+
+static void apply_threshold(Pixel *pixels, int width, int height, int threshold)
+{
+    int i;
+    int count;
+    int gray;
+    unsigned char value;
+
+    count = width * height;
+
+    for (i = 0; i < count; i++) {
+        gray = ((int)pixels[i].r + (int)pixels[i].g + (int)pixels[i].b) / 3;
+        value = gray >= threshold ? 255 : 0;
+
+        pixels[i].r = value;
+        pixels[i].g = value;
+        pixels[i].b = value;
+    }
+}
+
+static void apply_contrast(Pixel *pixels, int width, int height, int amount)
+{
+    int i;
+    int count;
+    int factor_num;
+    int factor_den;
+
+    count = width * height;
+    factor_num = 259 * (amount + 255);
+    factor_den = 255 * (259 - amount);
+
+    for (i = 0; i < count; i++) {
+        pixels[i].r = clamp_to_byte((factor_num * ((int)pixels[i].r - 128)) / factor_den + 128);
+        pixels[i].g = clamp_to_byte((factor_num * ((int)pixels[i].g - 128)) / factor_den + 128);
+        pixels[i].b = clamp_to_byte((factor_num * ((int)pixels[i].b - 128)) / factor_den + 128);
+    }
+}
+
 static void apply_flip_horizontal(Pixel *pixels, int width, int height)
 {
     int row;
@@ -123,6 +188,15 @@ void apply_filters(Pixel *pixels,
                 break;
             case FILTER_FLIP_V:
                 apply_flip_vertical(pixels, width, height);
+                break;
+            case FILTER_SEPIA:
+                apply_sepia(pixels, width, height);
+                break;
+            case FILTER_THRESHOLD:
+                apply_threshold(pixels, width, height, commands[i].param);
+                break;
+            case FILTER_CONTRAST:
+                apply_contrast(pixels, width, height, commands[i].param);
                 break;
             default:
                 break;

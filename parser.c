@@ -48,6 +48,50 @@ static int parse_brightness(const char *line, FilterCommand *command, int line_n
     return 1;
 }
 
+static int parse_threshold(const char *line, FilterCommand *command, int line_number)
+{
+    char extra[32];
+    int value;
+    int count;
+
+    count = sscanf(line, "THRESHOLD %d %31s", &value, extra);
+    if (count != 1) {
+        fprintf(stderr, "Line %d: THRESHOLD requires exactly 1 integer parameter\n", line_number);
+        return 0;
+    }
+
+    if (value < 0 || value > 255) {
+        fprintf(stderr, "Line %d: THRESHOLD value must be between 0 and 255\n", line_number);
+        return 0;
+    }
+
+    command->type = FILTER_THRESHOLD;
+    command->param = value;
+    return 1;
+}
+
+static int parse_contrast(const char *line, FilterCommand *command, int line_number)
+{
+    char extra[32];
+    int value;
+    int count;
+
+    count = sscanf(line, "CONTRAST %d %31s", &value, extra);
+    if (count != 1) {
+        fprintf(stderr, "Line %d: CONTRAST requires exactly 1 integer parameter\n", line_number);
+        return 0;
+    }
+
+    if (value < -255 || value > 255) {
+        fprintf(stderr, "Line %d: CONTRAST value must be between -255 and 255\n", line_number);
+        return 0;
+    }
+
+    command->type = FILTER_CONTRAST;
+    command->param = value;
+    return 1;
+}
+
 static int parse_flip(const char *line, FilterCommand *command, int line_number)
 {
     char direction[32];
@@ -108,8 +152,19 @@ int parse_script(FILE *script_file, FilterCommand commands[], int *command_count
         } else if (strcmp(line, "INVERT") == 0) {
             command.type = FILTER_INVERT;
             command.param = 0;
+        } else if (strcmp(line, "SEPIA") == 0) {
+            command.type = FILTER_SEPIA;
+            command.param = 0;
         } else if (strncmp(line, "BRIGHTNESS", 10) == 0) {
             if (!parse_brightness(line, &command, line_number)) {
+                return 0;
+            }
+        } else if (strncmp(line, "THRESHOLD", 9) == 0) {
+            if (!parse_threshold(line, &command, line_number)) {
+                return 0;
+            }
+        } else if (strncmp(line, "CONTRAST", 8) == 0) {
+            if (!parse_contrast(line, &command, line_number)) {
                 return 0;
             }
         } else if (strncmp(line, "FLIP", 4) == 0) {
@@ -151,6 +206,15 @@ void print_command(const FilterCommand *command, int index)
             break;
         case FILTER_FLIP_V:
             printf("FLIP V\n");
+            break;
+        case FILTER_SEPIA:
+            printf("SEPIA\n");
+            break;
+        case FILTER_THRESHOLD:
+            printf("THRESHOLD %d\n", command->param);
+            break;
+        case FILTER_CONTRAST:
+            printf("CONTRAST %d\n", command->param);
             break;
         default:
             printf("UNKNOWN\n");
