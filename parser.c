@@ -1,19 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include "parser.h"
-
-static int is_blank_line(const char *line)
-{
-    int i;
-
-    for (i = 0; line[i] != '\0'; i++) {
-        if (line[i] != ' ' && line[i] != '\t' && line[i] != '\n' && line[i] != '\r') {
-            return 0;
-        }
-    }
-    return 1;
-}
 
 static void trim_newline(char *line)
 {
@@ -23,6 +12,54 @@ static void trim_newline(char *line)
     while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
         line[len - 1] = '\0';
         len--;
+    }
+}
+
+static void trim_whitespace(char *line)
+{
+    char *start;
+    char *end;
+    size_t len;
+
+    if (line == NULL) {
+        return;
+    }
+
+    start = line;
+    while (*start != '\0' && isspace((unsigned char)*start)) {
+        start++;
+    }
+
+    if (*start == '\0') {
+        line[0] = '\0';
+        return;
+    }
+
+    end = start + strlen(start) - 1;
+    while (end > start && isspace((unsigned char)*end)) {
+        end--;
+    }
+
+    len = (size_t)(end - start + 1);
+    memmove(line, start, len);
+    line[len] = '\0';
+}
+
+static int is_blank_line(const char *line)
+{
+    return line == NULL || line[0] == '\0';
+}
+
+static void to_uppercase_in_place(char *line)
+{
+    int i;
+
+    if (line == NULL) {
+        return;
+    }
+
+    for (i = 0; line[i] != '\0'; i++) {
+        line[i] = (char)toupper((unsigned char)line[i]);
     }
 }
 
@@ -135,18 +172,22 @@ int parse_script(FILE *script_file, FilterCommand commands[], int *command_count
 
     while (fgets(line, sizeof(line), script_file) != NULL) {
         line_number++;
+
         trim_newline(line);
+        trim_whitespace(line);
 
         if (is_blank_line(line)) {
             continue;
         }
+
+        to_uppercase_in_place(line);
 
         if (*command_count >= MAX_COMMANDS) {
             fprintf(stderr, "Too many commands in script (maximum %d)\n", MAX_COMMANDS);
             return 0;
         }
 
-        if (strcmp(line, "GRAYSCALE") == 0) {
+        if (strcmp(line, "GRAYSCALE") == 0 || strcmp(line, "GREYSCALE") == 0) {
             command.type = FILTER_GRAYSCALE;
             command.param = 0;
         } else if (strcmp(line, "INVERT") == 0) {

@@ -1,1 +1,3 @@
-CONTRAST 30
+CONTRAST 100
+grayscale    
+inVert

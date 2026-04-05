@@ -14,6 +14,7 @@ typedef enum {
     COMPRESSION_OK,
     OFFSET_OK,
     DIMENSIONS_OK,
+    PIXEL_BOUNDS_OK,
     VALID,
     INVALID
 } State;
