@@ -2,126 +2,171 @@
 
 ## Overview
 
-This project implements a custom image filtering system for **uncompressed BMP files** using **ANSI C**.
-Users can apply a sequence of filters to an image by specifying commands in a script file.
+This project implements a custom image filtering system for **uncompressed 24-bit BMP images** using **ANSI C**.
 
-The system is designed to be:
+The program:
 
-* Modular
-* Extensible
-* Transparent (no hidden processing like typical image tools)
-
----
-
-## Features
-
-* Reads and validates BMP files using a **Finite State Machine (FSM)**
-* Custom **script parser** for filter commands
+* Validates BMP files using a **Finite State Machine (FSM)**
+* Parses a custom **filter script**
 * Applies transformations directly to pixel data
-* Robust handling of invalid inputs and edge cases
-* Fully compliant with **ANSI C** (`-Wall -Werror -ansi -pedantic`)
+* Outputs a new processed BMP file
 
 ---
 
 ## Project Structure
 
-```
-.
-├── main.c          # Entry point
-├── bmp.c / bmp.h   # BMP file handling
-├── fsm.c / fsm.h   # FSM validation logic
-├── parser.c / parser.h  # Script parsing
-├── filter.c / filter.h  # Image filters
-├── Makefile        # Build instructions
-└── examples/       # Sample BMP and script files
+```bash
+plc_project2026/
+├── main.c
+├── bmp.c / bmp.h
+├── fsm.c / fsm.h
+├── parser.c / parser.h
+├── filters.c / filters.h
+├── Makefile
+├── bmpfilter          # Linux/WSL executable
+├── bmpfilter.exe      # Windows executable
+├── test.bmp           # Sample input image
+├── filters.txt        # Sample filter script
+├── output.bmp         # Example output
+└── README.md
 ```
 
 ---
 
 ## Requirements
 
-* GCC or compatible C compiler
-* Unix-like environment (Linux / Mac) or Windows with MinGW
-* Make utility
+* C compiler (GCC recommended)
+* Make (for Linux/WSL)
+* Windows, Linux, or WSL
 
 ---
 
 ## Compilation
 
-Run the following command:
+### On Linux / WSL:
 
 ```bash
 make
 ```
 
-This will compile the program and generate the executable.
-
----
-
-## Usage
+### Manual compilation (if make is unavailable):
 
 ```bash
-./program input.bmp script.txt output.bmp
+gcc -ansi -pedantic -Wall -Werror main.c bmp.c fsm.c parser.c filters.c -o bmpfilter
 ```
-
-### Arguments:
-
-* `input.bmp` → Input BMP image
-* `script.txt` → Filter script file
-* `output.bmp` → Output filtered image
 
 ---
 
-## Example Script
+## How to Run
 
+### On Windows (PowerShell / VS Code Terminal)
+
+Run the precompiled executable:
+
+```powershell
+.\bmpfilter.exe test.bmp filters.txt output.bmp
 ```
+
+---
+
+### On Linux / WSL (VS Code WSL Terminal)
+
+Run the Linux executable:
+
+```bash
+./bmpfilter test.bmp filters.txt output.bmp
+```
+
+---
+
+## Input Files
+
+* `test.bmp` → Input BMP image (must be uncompressed, 24-bit)
+* `filters.txt` → Script containing filter commands
+
+---
+
+## Output
+
+* `output.bmp` → Processed BMP image
+
+---
+
+## Example Filter Script
+
+```txt
 GRAYSCALE
 INVERT
 BRIGHTNESS 20
+FLIP H
 ```
 
 ### Description:
 
-1. Convert image to grayscale
-2. Invert colors
-3. Increase brightness by 20
+* Convert image to grayscale
+* Invert colors
+* Increase brightness
+* Flip horizontally
 
 ---
 
-## How It Works
+## How the System Works
 
 1. **Read BMP Headers**
-   Extract BMP and DIB headers from the input file
+   Extract BMP and DIB headers from input file
 
-2. **Validate with FSM**
-   Ensure file integrity (format, size, offsets, etc.)
+2. **Validate Using FSM**
+   Ensures file is a valid BMP:
 
-3. **Parse Script**
-   Read and validate filter commands
+   * Correct signature ("BM")
+   * Valid header fields
+   * Pixel data within bounds
+
+3. **Parse Filter Script**
+
+   * Reads commands line-by-line
+   * Validates syntax and parameters
 
 4. **Apply Filters**
-   Modify pixel data based on commands
 
-5. **Write Output**
-   Save processed image as a valid BMP file
+   * Processes pixel data in memory
+   * Applies filters in order
+
+5. **Write Output File**
+
+   * Preserves BMP structure
+   * Writes updated pixel data
+
+---
+
+## Supported Filters
+
+* `GRAYSCALE` / `GREYSCALE`
+* `INVERT`
+* `SEPIA`
+* `BRIGHTNESS <value>`  (-255 to 255)
+* `THRESHOLD <value>`   (0 to 255)
+* `CONTRAST <value>`    (-255 to 255)
+* `FLIP H` (horizontal)
+* `FLIP V` (vertical)
 
 ---
 
 ## Error Handling
 
-The program detects and reports:
+The program detects:
 
 * Invalid BMP files
 * Incorrect header values
-* Unknown filter commands
-* Invalid parameters
+* Invalid script commands
+* Incorrect parameters
 * File size inconsistencies
 
 ---
 
 ## Limitations
 
-* Supports only **uncompressed BMP (24-bit)**
+* Supports only **uncompressed 24-bit BMP**
 * No support for compressed formats (PNG, JPEG)
 * Command-line interface only
 
@@ -131,7 +176,7 @@ The program detects and reports:
 
 * Add more filters (blur, sharpen, edge detection)
 * Support additional image formats
-* Implement GUI interface
+* Implement graphical user interface (GUI)
 * Optimize memory usage for large images
 
 ---
@@ -147,29 +192,28 @@ The program detects and reports:
 
 ## Notes
 
-* Ensure input BMP files are valid and uncompressed
-* Script commands are case-insensitive
-* Whitespace in scripts is ignored
+* Script commands are **case-insensitive**
+* Extra whitespace is ignored
+* Output file will be overwritten if it exists
 
 ---
 
-## How to Reproduce
+## Reproducibility
 
-1. Compile the program using `make`
-2. Use sample files from `/examples`
+To reproduce results:
+
+1. Compile the program (if needed)
+2. Use `test.bmp` and `filters.txt`
 3. Run the command shown above
+4. Check `output.bmp`
 
 ---
 
-## Conclusion
-
-This project demonstrates the use of:
+## Concepts Demonstrated
 
 * File I/O (binary and text)
-* Finite State Machines
-* Custom parsing
-* Modular C programming
-
-to build a robust and extensible image processing system.
+* Finite State Machines (FSM)
+* Custom parser implementation
+* Modular ANSI C programming
 
 ---
