@@ -1,6 +1,6 @@
 # BMP Image Filtering System (ANSI C)
 
-## 📌 Overview
+## Overview
 
 This project implements a custom image filtering system for **uncompressed BMP files** using **ANSI C**.
 Users can apply a sequence of filters to an image by specifying commands in a script file.
@@ -13,7 +13,7 @@ The system is designed to be:
 
 ---
 
-## 🎯 Features
+## Features
 
 * Reads and validates BMP files using a **Finite State Machine (FSM)**
 * Custom **script parser** for filter commands
@@ -23,7 +23,7 @@ The system is designed to be:
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 .
@@ -38,7 +38,7 @@ The system is designed to be:
 
 ---
 
-## ⚙️ Requirements
+## Requirements
 
 * GCC or compatible C compiler
 * Unix-like environment (Linux / Mac) or Windows with MinGW
@@ -46,7 +46,7 @@ The system is designed to be:
 
 ---
 
-## 🔧 Compilation
+## Compilation
 
 Run the following command:
 
@@ -58,7 +58,7 @@ This will compile the program and generate the executable.
 
 ---
 
-## ▶️ Usage
+## Usage
 
 ```bash
 ./program input.bmp script.txt output.bmp
@@ -72,7 +72,7 @@ This will compile the program and generate the executable.
 
 ---
 
-## 🧾 Example Script
+## Example Script
 
 ```
 GRAYSCALE
@@ -88,7 +88,7 @@ BRIGHTNESS 20
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 1. **Read BMP Headers**
    Extract BMP and DIB headers from the input file
@@ -107,7 +107,7 @@ BRIGHTNESS 20
 
 ---
 
-## ⚠️ Error Handling
+## Error Handling
 
 The program detects and reports:
 
@@ -119,7 +119,7 @@ The program detects and reports:
 
 ---
 
-## 🚧 Limitations
+## Limitations
 
 * Supports only **uncompressed BMP (24-bit)**
 * No support for compressed formats (PNG, JPEG)
@@ -127,7 +127,7 @@ The program detects and reports:
 
 ---
 
-## 🚀 Future Improvements
+## Future Improvements
 
 * Add more filters (blur, sharpen, edge detection)
 * Support additional image formats
@@ -136,7 +136,7 @@ The program detects and reports:
 
 ---
 
-## 👥 Team Members
+## Team Members
 
 * Celest Ng Song Wei
 * Trina Tan Xin Ting
@@ -145,7 +145,7 @@ The program detects and reports:
 
 ---
 
-## 📖 Notes
+## Notes
 
 * Ensure input BMP files are valid and uncompressed
 * Script commands are case-insensitive
@@ -153,7 +153,7 @@ The program detects and reports:
 
 ---
 
-## 📌 How to Reproduce
+## How to Reproduce
 
 1. Compile the program using `make`
 2. Use sample files from `/examples`
@@ -161,7 +161,7 @@ The program detects and reports:
 
 ---
 
-## 🏁 Conclusion
+## Conclusion
 
 This project demonstrates the use of:
 
